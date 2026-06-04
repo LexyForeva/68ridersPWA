@@ -16,6 +16,7 @@ import {
   Users,
 } from 'lucide-react'
 import GlassCard from '../components/GlassCard'
+import Modal from '../components/Modal'
 import { useAppData } from '../context/AppContext'
 
 const modules = [
@@ -125,7 +126,32 @@ function MemberManagement({ app }) {
     bike: 'CFMOTO 450 SR',
   })
 
+  const [selectedMemberId, setSelectedMemberId] = useState(null)
+  const [actionReason, setActionReason] = useState('')
+  const [roleDraft, setRoleDraft] = useState('member')
+  const selectedMember = app.members.find((member) => member.id === selectedMemberId)
+  const selectedHistory = selectedMember
+    ? (app.moderationActions || []).filter(
+        (action) =>
+          action.targetProfileId === selectedMember.profileId ||
+          action.targetMemberId === selectedMember.id ||
+          action.memberName === selectedMember.name,
+      )
+    : []
+
   const update = (key, value) => setMemberForm((current) => ({ ...current, [key]: value }))
+
+  const openMember = (member) => {
+    setSelectedMemberId(member.id)
+    setRoleDraft(member.rawRole || 'member')
+    setActionReason('')
+  }
+
+  const runModeration = (actionType) => {
+    if (!selectedMember) return
+    app.moderateMember(selectedMember.id, actionType, actionReason, roleDraft)
+    setActionReason('')
+  }
 
   const submitApplication = (event) => {
     event.preventDefault()
@@ -153,6 +179,9 @@ function MemberManagement({ app }) {
       <div className="admin-list">
         {app.pendingMembers.map((member) => (
           <MemberRow key={member.id} member={member}>
+            <button type="button" onClick={() => openMember(member)}>
+              Detay
+            </button>
             <button type="button" onClick={() => app.approveMember(member.id)}>
               <UserCheck size={15} /> Onayla
             </button>
@@ -168,6 +197,9 @@ function MemberManagement({ app }) {
       <div className="admin-list">
         {app.activeMembers.map((member) => (
           <MemberRow key={member.id} member={member}>
+            <button type="button" onClick={() => openMember(member)}>
+              Detay
+            </button>
             <button type="button" onClick={() => app.warnMember(member.id)}>
               <ShieldAlert size={15} /> Uyar
             </button>
@@ -182,6 +214,9 @@ function MemberManagement({ app }) {
       <div className="admin-list">
         {app.blockedMembers.map((member) => (
           <MemberRow key={member.id} member={member}>
+            <button type="button" onClick={() => openMember(member)}>
+              Detay
+            </button>
             <button type="button" onClick={() => app.restoreMember(member.id)}>
               <Undo2 size={15} /> Geri Al
             </button>
@@ -189,6 +224,69 @@ function MemberManagement({ app }) {
         ))}
         {!app.blockedMembers.length && <GlassCard className="admin-list-item">Banlı veya atılan üye yok.</GlassCard>}
       </div>
+
+      {selectedMember && (
+        <Modal title={`${selectedMember.name} Detayı`} onClose={() => setSelectedMemberId(null)}>
+          <div className="member-detail">
+            <GlassCard className="member-detail-card">
+              <b>{selectedMember.name}</b>
+              <span>#{selectedMember.id} · {selectedMember.role}</span>
+              <span>{selectedMember.email}</span>
+              <span>{selectedMember.phone} · {selectedMember.bike}</span>
+              <span>Uyarı {selectedMember.warnings || 0}/3 · Durum: {selectedMember.status}</span>
+            </GlassCard>
+
+            {selectedMember.rawRole !== 'founder' && (
+              <label className="field">
+                <span>Rol</span>
+                <select value={roleDraft} onChange={(event) => setRoleDraft(event.target.value)}>
+                  <option value="member">Üye</option>
+                  <option value="moderator">Moderatör</option>
+                  <option value="admin">Yönetim</option>
+                </select>
+              </label>
+            )}
+
+            <label className="field">
+              <span>İşlem sebebi</span>
+              <textarea
+                value={actionReason}
+                onChange={(event) => setActionReason(event.target.value)}
+                placeholder="Örn. Grup kurallarına aykırı paylaşım yaptı."
+              />
+            </label>
+
+            <div className="detail-actions">
+              {selectedMember.rawRole !== 'founder' && (
+                <button type="button" onClick={() => runModeration('role_update')}>
+                  Rolü Kaydet
+                </button>
+              )}
+              <button type="button" onClick={() => runModeration('warning')}>
+                Uyarı Ver
+              </button>
+              <button type="button" className="danger" onClick={() => runModeration('ban')}>
+                Banla
+              </button>
+              <button type="button" onClick={() => runModeration('restore')}>
+                Aktif Et
+              </button>
+            </div>
+
+            <h3>İşlem Geçmişi</h3>
+            <div className="moderation-history">
+              {selectedHistory.map((action) => (
+                <GlassCard className="history-item" key={action.id}>
+                  <b>{action.actionType}</b>
+                  <span>{action.reason}</span>
+                  <small>{action.createdAt}</small>
+                </GlassCard>
+              ))}
+              {!selectedHistory.length && <GlassCard className="admin-list-item">Henüz işlem geçmişi yok.</GlassCard>}
+            </div>
+          </div>
+        </Modal>
+      )}
     </>
   )
 }

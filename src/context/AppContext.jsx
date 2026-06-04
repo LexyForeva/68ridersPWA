@@ -40,6 +40,23 @@ const dataUrlToBlob = async (dataUrl) => {
   return response.blob()
 }
 
+const inferRoleKey = (role, fallback = 'member') => {
+  const value = String(role || '').toLocaleLowerCase('tr-TR')
+  if (['founder', 'admin', 'moderator', 'member'].includes(value)) return value
+  if (value.includes('kurucu')) return 'founder'
+  if (value.includes('yönetim') || value.includes('yonetim') || value.includes('admin')) return 'admin'
+  if (value.includes('moderat')) return 'moderator'
+  return fallback
+}
+
+const roleLabelFromKey = (role) =>
+  ({
+    founder: 'Kurucu Üye',
+    admin: 'Yönetim',
+    moderator: 'Moderatör',
+    member: 'Üye',
+  }[role] || 'Üye')
+
 const profileToUser = (profile, fallback) => ({
   ...fallback,
   id: profile.member_no || fallback.id,
@@ -87,6 +104,15 @@ const galleryFromDb = (item) => ({
   uploadedBy: item.uploaded_by_name || '',
 })
 
+const moderationFromDb = (action) => ({
+  id: action.id,
+  targetProfileId: action.target_profile_id,
+  actionType: action.action_type,
+  reason: action.reason || 'Sebep girilmedi.',
+  createdBy: action.created_by,
+  createdAt: action.created_at ? new Date(action.created_at).toLocaleString('tr-TR') : 'az önce',
+})
+
 const feedbackFromDb = (report) => ({
   id: report.id,
   title: report.title,
@@ -104,6 +130,7 @@ const profileFromDb = (member) =>
     id: member.member_no || member.id,
     profileId: member.id,
     name: member.full_name || member.email,
+    rawRole: member.role || 'member',
     role:
       {
         founder: 'Kurucu Üye',
@@ -141,6 +168,7 @@ const normalizeMember = (member) => {
     appliedAt: 'Demo kayıt',
     warnings: 0,
     status: 'active',
+    rawRole: inferRoleKey(member.rawRole || member.role),
     ...member,
   }
 
@@ -166,6 +194,7 @@ export function AppProvider({ children }) {
   const [gallery, setGallery] = useState(() => readStored('68riders:gallery', copyList(seedGallery)))
   const [messages, setMessages] = useState(() => copyList(seedMessages))
   const [feedbackReports, setFeedbackReports] = useState(() => readStored('68riders:feedbackReports', []))
+  const [moderationActions, setModerationActions] = useState(() => readStored('68riders:moderationActions', []))
   const [members, setMembers] = useState(() =>
     readStored('68riders:members', [
       ...seedMembers.map(normalizeMember),
@@ -204,6 +233,7 @@ export function AppProvider({ children }) {
   useEffect(() => writeStored('68riders:announcements', announcements), [announcements])
   useEffect(() => writeStored('68riders:gallery', gallery), [gallery])
   useEffect(() => writeStored('68riders:feedbackReports', feedbackReports), [feedbackReports])
+  useEffect(() => writeStored('68riders:moderationActions', moderationActions), [moderationActions])
   useEffect(() => writeStored('68riders:members', members), [members])
 
   useEffect(() => {
@@ -224,6 +254,7 @@ export function AppProvider({ children }) {
         applicationsResult,
         attendeeResult,
         feedbackResult,
+        moderationResult,
       ] = await Promise.all([
         supabase.from('events').select('*').order('created_at', { ascending: false }),
         supabase.from('announcements').select('*').order('created_at', { ascending: false }),
@@ -232,6 +263,7 @@ export function AppProvider({ children }) {
         supabase.from('membership_applications').select('*').order('created_at', { ascending: false }),
         supabase.from('event_attendees').select('event_id').eq('profile_id', auth.user?.id),
         supabase.from('feedback_reports').select('*').order('created_at', { ascending: false }),
+        supabase.from('moderation_actions').select('*').order('created_at', { ascending: false }),
       ])
 
       if (!alive) return
@@ -239,6 +271,7 @@ export function AppProvider({ children }) {
       if (!announcementsResult.error) setAnnouncements(announcementsResult.data || [])
       if (!galleryResult.error) setGallery((galleryResult.data || []).map(galleryFromDb))
       if (!feedbackResult.error) setFeedbackReports((feedbackResult.data || []).map(feedbackFromDb))
+      if (!moderationResult.error) setModerationActions((moderationResult.data || []).map(moderationFromDb))
       if (!profilesResult.error) {
         const dbMembers = (profilesResult.data || []).map(profileFromDb)
         const profileEmails = new Set(dbMembers.map((member) => String(member.email).toLowerCase()))
@@ -262,6 +295,7 @@ export function AppProvider({ children }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, loadAll)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'membership_applications' }, loadAll)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'feedback_reports' }, loadAll)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'moderation_actions' }, loadAll)
       .subscribe()
 
     return () => {
@@ -632,15 +666,33 @@ export function AppProvider({ children }) {
     [notify],
   )
 
+  const pushModerationAction = useCallback((member, actionType, reason) => {
+    if (!member) return
+    setModerationActions((current) => [
+      {
+        id: Date.now(),
+        targetProfileId: member.profileId || null,
+        targetMemberId: member.id,
+        memberName: member.name,
+        actionType,
+        reason: reason || 'Sebep girilmedi.',
+        createdBy: auth.user?.id || 'local-admin',
+        createdAt: new Date().toLocaleString('tr-TR'),
+      },
+      ...current,
+    ])
+  }, [auth.user?.id])
+
   const updateMemberStatus = useCallback(
-    async (memberId, status, activityMessage, toastMessage) => {
+    async (memberId, status, activityMessage, toastMessage, reason) => {
       const member = members.find((item) => item.id === memberId)
+      const actionReason = reason || activityMessage
       if (realBackend && supabase && member?.profileId) {
         await supabase.from('profiles').update({ status }).eq('id', member.profileId)
         await supabase.from('moderation_actions').insert({
           target_profile_id: member.profileId,
           action_type: status,
-          reason: activityMessage,
+          reason: actionReason,
           created_by: auth.user?.id,
         })
       }
@@ -667,9 +719,10 @@ export function AppProvider({ children }) {
         ),
       )
       notify(toastMessage)
+      pushModerationAction(member, status, actionReason)
       addActivity(activityMessage)
     },
-    [addActivity, auth.user?.id, members, notify, realBackend],
+    [addActivity, auth.user?.id, members, notify, pushModerationAction, realBackend],
   )
 
   const approveMember = useCallback(
@@ -763,6 +816,79 @@ export function AppProvider({ children }) {
     [addActivity, auth.user?.id, members, notify, realBackend],
   )
 
+  const moderateMember = useCallback(
+    async (memberId, actionType, reason, nextRole) => {
+      const member = members.find((item) => item.id === memberId)
+      if (!member) return
+      if (member.rawRole === 'founder' || String(member.id) === currentUser.id) {
+        notify('Kurucu hesabı bu işlemden korunur.', 'warning')
+        return
+      }
+
+      const roleLabel = nextRole ? roleLabelFromKey(nextRole) : member.role
+      const nextWarnings = actionType === 'warning' ? Number(member.warnings || 0) + 1 : Number(member.warnings || 0)
+      const autoRemoved = actionType === 'warning' && nextWarnings >= 3
+      const statusMap = {
+        warning: autoRemoved ? 'removed' : member.status,
+        ban: 'banned',
+        reject: 'rejected',
+        restore: 'active',
+        role_update: member.status,
+      }
+      const dbActionType = autoRemoved ? 'auto_removed' : actionType
+      const actionReason = reason || 'Sebep girilmedi.'
+      const nextStatus = statusMap[actionType] || member.status
+
+      if (realBackend && supabase && member.profileId) {
+        const profilePatch = {}
+        if (actionType === 'warning') {
+          profilePatch.warnings = nextWarnings
+          profilePatch.status = nextStatus
+        }
+        if (['ban', 'reject', 'restore'].includes(actionType)) {
+          profilePatch.status = nextStatus
+          if (actionType === 'restore') profilePatch.warnings = 0
+        }
+        if (actionType === 'role_update' && nextRole) profilePatch.role = nextRole
+        if (Object.keys(profilePatch).length) {
+          await supabase.from('profiles').update(profilePatch).eq('id', member.profileId)
+        }
+        await supabase.from('moderation_actions').insert({
+          target_profile_id: member.profileId,
+          action_type: dbActionType,
+          reason: actionReason,
+          created_by: auth.user?.id,
+        })
+      }
+
+      setMembers((current) =>
+        current.map((item) =>
+          item.id === memberId
+            ? {
+                ...item,
+                status: nextStatus,
+                warnings: actionType === 'restore' ? 0 : nextWarnings,
+                rawRole: actionType === 'role_update' && nextRole ? nextRole : item.rawRole,
+                role: actionType === 'role_update' && nextRole ? roleLabel : item.role,
+              }
+            : item,
+        ),
+      )
+      pushModerationAction(member, dbActionType, actionReason)
+      notify(
+        {
+          warning: autoRemoved ? '3 uyarı tamamlandı, üye otomatik atıldı.' : 'Uyarı kaydedildi.',
+          ban: 'Üye banlandı.',
+          reject: 'Üye reddedildi.',
+          restore: 'Üye tekrar aktif edildi.',
+          role_update: 'Üye rolü güncellendi.',
+        }[actionType] || 'İşlem kaydedildi.',
+      )
+      addActivity(`${member.name}: ${actionReason}`)
+    },
+    [addActivity, auth.user?.id, currentUser.id, members, notify, pushModerationAction, realBackend],
+  )
+
   const activeMembers = useMemo(() => members.filter((member) => member.status === 'active'), [members])
   const pendingMembers = useMemo(() => members.filter((member) => member.status === 'pending'), [members])
   const blockedMembers = useMemo(
@@ -788,6 +914,7 @@ export function AppProvider({ children }) {
       gallery,
       messages,
       feedbackReports,
+      moderationActions,
       members,
       activeMembers,
       pendingMembers,
@@ -815,6 +942,7 @@ export function AppProvider({ children }) {
       warnMember,
       banMember,
       restoreMember,
+      moderateMember,
     }),
     [
       currentUser,
@@ -823,6 +951,7 @@ export function AppProvider({ children }) {
       gallery,
       messages,
       feedbackReports,
+      moderationActions,
       members,
       activeMembers,
       pendingMembers,
@@ -850,6 +979,7 @@ export function AppProvider({ children }) {
       warnMember,
       banMember,
       restoreMember,
+      moderateMember,
     ],
   )
 

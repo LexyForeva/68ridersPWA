@@ -1643,6 +1643,77 @@ h2 {
   margin-top: 3px;
 }
 
+.member-detail {
+  display: grid;
+  gap: 12px;
+}
+
+.member-detail-card {
+  display: grid;
+  gap: 4px;
+}
+
+.member-detail-card b,
+.member-detail-card span {
+  display: block;
+}
+
+.member-detail-card span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.detail-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.detail-actions button {
+  border: 1px solid #ef232b55;
+  border-radius: 13px;
+  background: #ef232b18;
+  color: #f4f4f5;
+  padding: 10px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.detail-actions button.danger {
+  border-color: #ef232b80;
+  background: linear-gradient(135deg, #ef232b, #9f1015);
+  color: white;
+}
+
+.member-detail h3 {
+  margin: 2px 0 0;
+  font-size: 14px;
+}
+
+.moderation-history {
+  display: grid;
+  gap: 8px;
+}
+
+.history-item {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+}
+
+.history-item b {
+  color: #f4f4f5;
+  font-size: 13px;
+}
+
+.history-item span,
+.history-item small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .row-actions {
   grid-column: 1 / -1;
   display: flex;
