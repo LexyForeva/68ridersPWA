@@ -21,11 +21,17 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
-  background:
-    radial-gradient(circle at 50% -10%, #2a0b0d 0, #09090b 36%, #030304 100%),
-    #030304;
+  background: radial-gradient(circle at 50% -10%, #2a0b0d 0, #09090b 36%, #030304 100%), #030304;
   color: var(--white);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Arial,
+    sans-serif;
 }
 
 a {
@@ -47,7 +53,7 @@ button {
 
 button:disabled {
   cursor: not-allowed;
-  opacity: .6;
+  opacity: 0.6;
 }
 
 :focus-visible {
@@ -119,7 +125,9 @@ button:disabled {
 .sticky-action.joined {
   background: linear-gradient(135deg, #27272d, #161619);
   border: 1px solid #ef232b77;
-  box-shadow: inset 0 0 0 1px #ffffff0a, 0 10px 28px #0007;
+  box-shadow:
+    inset 0 0 0 1px #ffffff0a,
+    0 10px 28px #0007;
   color: #fecdd3;
 }
 
@@ -220,8 +228,7 @@ button:disabled {
 .profile-photo {
   border: 1px solid var(--line);
   background:
-    radial-gradient(circle at 60% 35%, #bbb, #111 42%, #050506 70%),
-    linear-gradient(135deg, #2d2d32, #050505);
+    radial-gradient(circle at 60% 35%, #bbb, #111 42%, #050506 70%), linear-gradient(135deg, #2d2d32, #050505);
 }
 
 .avatar {
@@ -253,7 +260,7 @@ button:disabled {
 
 h2 {
   font-size: 15px;
-  letter-spacing: .8px;
+  letter-spacing: 0.8px;
   text-transform: uppercase;
 }
 
@@ -261,7 +268,7 @@ h2 {
   color: var(--red);
   font-size: 11px;
   font-weight: 1000;
-  letter-spacing: .8px;
+  letter-spacing: 0.8px;
 }
 
 .hero-card.premium {
@@ -275,7 +282,7 @@ h2 {
 .hero-card.premium .moto-img {
   position: absolute;
   inset: 0;
-  opacity: .45;
+  opacity: 0.45;
 }
 
 .hero-copy {
@@ -344,11 +351,11 @@ h2 {
 }
 
 .moto-img.night svg {
-  filter: hue-rotate(320deg) saturate(1.15) brightness(.9);
+  filter: hue-rotate(320deg) saturate(1.15) brightness(0.9);
 }
 
 .moto-img.mountain svg {
-  filter: hue-rotate(15deg) saturate(.8) brightness(.9);
+  filter: hue-rotate(15deg) saturate(0.8) brightness(0.9);
 }
 
 .moto-img span {
@@ -511,7 +518,9 @@ h2 {
   gap: 4px;
   color: #a1a1aa;
   font-size: 10px;
-  transition: color .18s ease, transform .18s ease;
+  transition:
+    color 0.18s ease,
+    transform 0.18s ease;
 }
 
 .nav-item.active {
@@ -539,7 +548,9 @@ h2 {
 }
 
 .qr-fab.active {
-  box-shadow: 0 0 0 4px #ef232b24, 0 12px 34px #ef232b70;
+  box-shadow:
+    0 0 0 4px #ef232b24,
+    0 12px 34px #ef232b70;
 }
 
 .tabs {
@@ -744,9 +755,7 @@ h2 {
   margin-top: 22px;
   border: 1px solid var(--line);
   border-radius: 28px;
-  background:
-    radial-gradient(circle at 50% 0, #ef232b2d, transparent 28%),
-    linear-gradient(145deg, #17171c, #060607);
+  background: radial-gradient(circle at 50% 0, #ef232b2d, transparent 28%), linear-gradient(145deg, #17171c, #060607);
   padding: 32px 22px;
   text-align: center;
 }
@@ -853,7 +862,7 @@ h2 {
 }
 
 .announce.read {
-  opacity: .78;
+  opacity: 0.78;
 }
 
 .gallery-grid {
@@ -902,8 +911,7 @@ h2 {
   border: 1px solid var(--line);
   border-radius: 18px;
   background:
-    linear-gradient(180deg, #0008, #000c),
-    radial-gradient(circle at 50% 45%, #ef232b44, transparent 34%),
+    linear-gradient(180deg, #0008, #000c), radial-gradient(circle at 50% 45%, #ef232b44, transparent 34%),
     linear-gradient(135deg, #16161a, #050506);
   display: grid;
   place-items: center;
@@ -1653,9 +1661,7 @@ h2 {
 .founder-card {
   padding: 18px;
   margin-bottom: 12px;
-  background:
-    radial-gradient(circle at 78% 18%, #ef232b33, transparent 32%),
-    linear-gradient(145deg, #1b1b21, #070708);
+  background: radial-gradient(circle at 78% 18%, #ef232b33, transparent 32%), linear-gradient(145deg, #1b1b21, #070708);
 }
 
 .founder-card h2 {
@@ -1894,7 +1900,7 @@ h2 {
 }
 
 .toggle::after {
-  content: "";
+  content: '';
   position: absolute;
   left: 3px;
   top: 3px;
@@ -1902,7 +1908,7 @@ h2 {
   height: 17px;
   border-radius: 50%;
   background: #f4f4f5;
-  transition: transform .18s ease;
+  transition: transform 0.18s ease;
 }
 
 .toggle.on {
@@ -1924,10 +1930,9 @@ h2 {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, #0003, #050507 78%),
-    radial-gradient(circle at 45% 62%, #3c3c42 0 8%, transparent 24%),
+    linear-gradient(180deg, #0003, #050507 78%), radial-gradient(circle at 45% 62%, #3c3c42 0 8%, transparent 24%),
     linear-gradient(135deg, #202026, #050506 45%, #09090b);
-  opacity: .95;
+  opacity: 0.95;
 }
 
 .login-content,
@@ -1945,7 +1950,7 @@ h2 {
   color: #d4d4d8;
   font-size: 13px;
   font-weight: 600;
-  letter-spacing: .5px;
+  letter-spacing: 0.5px;
 }
 
 .login-form {
@@ -2187,6 +2192,48 @@ h2 {
   border-color: #ffffff18;
   background: #ffffff0a;
   color: #f4f4f5;
+}
+
+/* iOS-specific install prompt */
+.pwa-banner.ios-install-prompt {
+  grid-template-columns: auto 1fr auto;
+  padding: 16px 14px;
+  bottom: 120px;
+}
+
+.ios-instructions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ios-steps {
+  margin-top: 6px;
+  padding: 10px;
+  border-radius: 10px;
+  background: #ffffff08;
+  border: 1px solid #ffffff10;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #e4e4e7;
+}
+
+.inline-icon {
+  display: inline;
+  vertical-align: middle;
+  margin: 0 2px;
+  color: #3b82f6;
+}
+
+/* iOS Safari specific adjustments */
+@supports (-webkit-touch-callout: none) {
+  .pwa-banner {
+    bottom: calc(154px + env(safe-area-inset-bottom));
+  }
+
+  .pwa-banner.ios-install-prompt {
+    bottom: calc(120px + env(safe-area-inset-bottom));
+  }
 }
 
 @media (max-width: 374px) {
