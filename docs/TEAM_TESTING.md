@@ -8,6 +8,7 @@ Bu dosya uygulamayi ekip uyelerine acmak ve gelen hatalari duzenli takip etmek i
    - `supabase/migrations/001_initial_schema.sql`
    - `supabase/migrations/002_membership_applications.sql`
    - `supabase/migrations/003_feedback_reports.sql`
+   - `supabase/migrations/004_security_hardening.sql`
 2. Projeyi Vercel'e bagla.
 3. Vercel Environment Variables alanina sunlari ekle:
    - `VITE_SUPABASE_URL`
@@ -21,6 +22,25 @@ Bu dosya uygulamayi ekip uyelerine acmak ve gelen hatalari duzenli takip etmek i
 7. Onaylanan uye giris yapar ve uygulamayi test eder.
 8. Hata bulan uye ana sayfadaki `Hata Bildir` kartindan rapor gonderir.
 9. Kurucu `/admin` > `Raporlar` icinden hatalari takip eder ve `Cozuldu` olarak isaretler.
+
+## Push Bildirimleri Acmak Icin
+
+Push bildirim gercek gonderim icin Supabase Edge Function hazirdir:
+
+```txt
+supabase/functions/send-push
+```
+
+Supabase CLI ile secrets:
+
+```bash
+supabase secrets set VAPID_PUBLIC_KEY="..."
+supabase secrets set VAPID_PRIVATE_KEY="..."
+supabase secrets set VAPID_SUBJECT="mailto:admin@68riders.com.tr"
+supabase functions deploy send-push
+```
+
+Vercel tarafinda `VITE_VAPID_PUBLIC_KEY` ayni public key olmalidir.
 
 ## Yerelde Ekip Testi
 

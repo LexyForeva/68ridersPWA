@@ -45,9 +45,26 @@ SQL dosyalari sirasiyla calistirilir:
 supabase/migrations/001_initial_schema.sql
 supabase/migrations/002_membership_applications.sql
 supabase/migrations/003_feedback_reports.sql
+supabase/migrations/004_security_hardening.sql
 ```
 
 Uyeler `/register` ile basvuru yapar, kurucu `/admin` panelinden onaylar.
+
+## Push Bildirim
+
+Client push aboneligi `VITE_VAPID_PUBLIC_KEY` ile acilir.
+
+Push gonderme backend scaffold:
+
+```txt
+supabase/functions/send-push
+```
+
+Deploy ve secret notlari:
+
+```txt
+supabase/functions/README.md
+```
 
 ## Ekip Testi
 
