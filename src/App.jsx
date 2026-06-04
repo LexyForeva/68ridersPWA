@@ -1,5 +1,6 @@
 import { Routes, Route, useLocation } from 'react-router-dom'
 import BottomNav from './components/BottomNav'
+import PWAInstallPrompt from './components/PWAInstallPrompt'
 import ProtectedRoute from './components/ProtectedRoute'
 import Toast from './components/Toast'
 import { useAppData } from './context/AppContext'
@@ -40,6 +41,7 @@ export default function App() {
         <Route path="*" element={<Home />} />
       </Routes>
       {showNav && <BottomNav />}
+      <PWAInstallPrompt />
       <Toast toast={toast} onDismiss={clearToast} />
     </main>
   )

@@ -2068,6 +2068,65 @@ h2 {
   background: #ffffff0a;
 }
 
+.pwa-banner {
+  position: fixed;
+  left: 50%;
+  bottom: 154px;
+  z-index: 55;
+  width: min(398px, calc(100vw - 24px));
+  transform: translateX(-50%);
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #ef232b4d;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #18181df2, #070708f7);
+  box-shadow: 0 18px 44px #0009;
+  padding: 12px;
+}
+
+.pwa-banner svg {
+  color: var(--red);
+}
+
+.pwa-banner b,
+.pwa-banner span {
+  display: block;
+}
+
+.pwa-banner b {
+  font-size: 13px;
+}
+
+.pwa-banner span {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.pwa-banner button {
+  border: 1px solid #ef232b55;
+  border-radius: 12px;
+  background: #ef232b18;
+  color: #fecdd3;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.pwa-banner .banner-close {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-color: #ffffff18;
+  background: #ffffff0a;
+  color: #f4f4f5;
+}
+
 @media (max-width: 374px) {
   .event-card {
     grid-template-columns: 104px 1fr;
