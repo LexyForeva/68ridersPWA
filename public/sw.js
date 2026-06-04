@@ -1,4 +1,4 @@
-const CACHE = '68-riders-cache-v3'
+const CACHE = '68-riders-cache-v4'
 const ASSETS = [
   '/',
   '/index.html',

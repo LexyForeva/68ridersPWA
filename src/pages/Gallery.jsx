@@ -17,7 +17,7 @@ export default function Gallery() {
   const [activeFilter, setActiveFilter] = useState('all')
   const [selectedItem, setSelectedItem] = useState(null)
   const [uploadOpen, setUploadOpen] = useState(false)
-  const [uploadForm, setUploadForm] = useState({ title: '', src: '' })
+  const [uploadForm, setUploadForm] = useState({ title: '', src: '', type: 'photo' })
   const uploadInputRef = useRef(null)
 
   const visibleGallery =
@@ -27,30 +27,37 @@ export default function Gallery() {
     const file = event.target.files?.[0]
     if (!file) return
 
-    if (!file.type.startsWith('image/')) {
-      notify('Galeri için fotoğraf dosyası seç.', 'warning')
+    const isVideo = file.type.startsWith('video/')
+    const isImage = file.type.startsWith('image/')
+    if (!isImage && !isVideo) {
+      notify('Galeri için fotoğraf veya video dosyası seç.', 'warning')
       return
     }
 
     const src = await readFileAsDataUrl(file)
-    setUploadForm((current) => ({ ...current, title: current.title || file.name.replace(/\.[^.]+$/, ''), src }))
+    setUploadForm((current) => ({
+      ...current,
+      title: current.title || file.name.replace(/\.[^.]+$/, ''),
+      src,
+      type: isVideo ? 'video' : 'photo',
+    }))
     event.target.value = ''
   }
 
   const submitUpload = (event) => {
     event.preventDefault()
     if (!uploadForm.src) {
-      notify('Önce fotoğraf seçmelisin.', 'warning')
+      notify('Önce medya dosyası seçmelisin.', 'warning')
       return
     }
 
     addGalleryItem({
-      title: uploadForm.title || 'Yeni fotoğraf',
-      type: 'photo',
+      title: uploadForm.title || (uploadForm.type === 'video' ? 'Yeni video' : 'Yeni fotoğraf'),
+      type: uploadForm.type,
       image: 'ride',
       src: uploadForm.src,
     })
-    setUploadForm({ title: '', src: '' })
+    setUploadForm({ title: '', src: '', type: 'photo' })
     setUploadOpen(false)
     setActiveFilter('all')
   }
@@ -60,7 +67,7 @@ export default function Gallery() {
       <div className="titlebar">
         <h1>Galeri</h1>
         <div className="head-actions">
-          <button className="icon-btn" type="button" onClick={() => setUploadOpen(true)} aria-label="Fotoğraf ekle">
+          <button className="icon-btn" type="button" onClick={() => setUploadOpen(true)} aria-label="Medya ekle">
             <ImagePlus size={18} />
           </button>
           <button className="icon-btn" type="button" aria-label="Galeri filtresi">
@@ -109,21 +116,21 @@ export default function Gallery() {
       </div>
 
       {uploadOpen && (
-        <Modal title="Fotoğraf Ekle" onClose={() => setUploadOpen(false)}>
+        <Modal title="Medya Ekle" onClose={() => setUploadOpen(false)}>
           <form className="modal-form" onSubmit={submitUpload}>
             <label className="field">
               <span>Başlık</span>
               <input
                 value={uploadForm.title}
                 onChange={(event) => setUploadForm((current) => ({ ...current, title: event.target.value }))}
-                placeholder="Örn. Yeni rota fotoğrafı"
+                placeholder="Örn. Yeni rota medyası"
               />
             </label>
             <button className="upload-drop" type="button" onClick={() => uploadInputRef.current?.click()}>
-              {uploadForm.src ? <img src={uploadForm.src} alt="Seçilen fotoğraf" /> : <ImagePlus size={32} />}
-              <span>{uploadForm.src ? 'Fotoğraf seçildi' : 'Fotoğraf seç'}</span>
+              {uploadForm.src ? <UploadPreview form={uploadForm} /> : <ImagePlus size={32} />}
+              <span>{uploadForm.src ? (uploadForm.type === 'video' ? 'Video seçildi' : 'Fotoğraf seçildi') : 'Fotoğraf veya video seç'}</span>
             </button>
-            <input ref={uploadInputRef} className="sr-only" type="file" accept="image/*" onChange={chooseFile} />
+            <input ref={uploadInputRef} className="sr-only" type="file" accept="image/*,video/*" onChange={chooseFile} />
             <button type="submit" className="primary-btn">
               Galeriye Ekle
             </button>
@@ -133,7 +140,9 @@ export default function Gallery() {
 
       {selectedItem && (
         <Modal title={selectedItem.title} onClose={() => setSelectedItem(null)} className="media-modal">
-          {selectedItem.type === 'video' ? (
+          {selectedItem.type === 'video' && selectedItem.src ? (
+            <video className="media-photo" src={selectedItem.src} controls playsInline />
+          ) : selectedItem.type === 'video' ? (
             <div className="video-demo">
               <PlayCircle size={58} />
               <b>Demo video oynatılıyor</b>
@@ -160,11 +169,20 @@ function GalleryThumb({ item }) {
   if (item.src) {
     return (
       <>
-        <img className="gallery-photo" src={item.src} alt="" />
+        {item.type === 'video' ? (
+          <video className="gallery-photo" src={item.src} muted playsInline preload="metadata" />
+        ) : (
+          <img className="gallery-photo" src={item.src} alt="" />
+        )}
         <span>{item.title}</span>
       </>
     )
   }
 
   return <MotoImage type={item.image} label={item.title} />
+}
+
+function UploadPreview({ form }) {
+  if (form.type === 'video') return <video src={form.src} muted playsInline preload="metadata" />
+  return <img src={form.src} alt="Seçilen medya" />
 }

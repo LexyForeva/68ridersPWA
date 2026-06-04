@@ -46,6 +46,7 @@ supabase/migrations/001_initial_schema.sql
 supabase/migrations/002_membership_applications.sql
 supabase/migrations/003_feedback_reports.sql
 supabase/migrations/004_security_hardening.sql
+supabase/migrations/005_media_and_chat_fixes.sql
 ```
 
 Uyeler `/register` ile basvuru yapar, kurucu `/admin` panelinden onaylar.

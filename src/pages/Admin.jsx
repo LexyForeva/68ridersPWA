@@ -299,6 +299,7 @@ function EventManagement({ app }) {
     place: 'Aksaray - Helvadere',
     distance: '64 km',
     details: 'Kurucu panelinden oluşturulan rota.',
+    src: '',
   })
   const [editingEventId, setEditingEventId] = useState(null)
 
@@ -311,6 +312,17 @@ function EventManagement({ app }) {
     setEditingEventId(null)
   }
 
+  const chooseEventImage = async (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      app.notify('Etkinlik için fotoğraf dosyası seç.', 'warning')
+      return
+    }
+    update('src', await readFileAsDataUrl(file))
+    event.target.value = ''
+  }
+
   const editEvent = (event) => {
     setEditingEventId(event.id)
     setEventForm({
@@ -320,6 +332,7 @@ function EventManagement({ app }) {
       place: event.place,
       distance: event.distance,
       details: event.details,
+      src: event.src || '',
     })
   }
 
@@ -331,6 +344,11 @@ function EventManagement({ app }) {
         <Field label="Saat" value={eventForm.time} onChange={(value) => update('time', value)} />
         <Field label="Konum" value={eventForm.place} onChange={(value) => update('place', value)} />
         <Field label="Mesafe" value={eventForm.distance} onChange={(value) => update('distance', value)} />
+        <label className="field">
+          <span>Etkinlik Fotoğrafı</span>
+          <input type="file" accept="image/*" onChange={chooseEventImage} />
+        </label>
+        {eventForm.src && <img className="admin-preview" src={eventForm.src} alt="Etkinlik görseli" />}
         <TextArea label="Detay" value={eventForm.details} onChange={(value) => update('details', value)} />
       </AdminForm>
       {editingEventId && (
@@ -440,11 +458,14 @@ function GalleryManagement({ app }) {
   const chooseFile = async (event) => {
     const file = event.target.files?.[0]
     if (!file) return
-    if (!file.type.startsWith('image/')) {
-      app.notify('Galeri için fotoğraf dosyası seç.', 'warning')
+    const isVideo = file.type.startsWith('video/')
+    const isImage = file.type.startsWith('image/')
+    if (!isImage && !isVideo) {
+      app.notify('Galeri için fotoğraf veya video dosyası seç.', 'warning')
       return
     }
     update('src', await readFileAsDataUrl(file))
+    update('type', isVideo ? 'video' : 'photo')
     update('title', galleryForm.title || file.name.replace(/\.[^.]+$/, ''))
     event.target.value = ''
   }
@@ -473,10 +494,10 @@ function GalleryManagement({ app }) {
           onChange={(value) => update('image', value)}
         />
         <label className="field">
-          <span>Fotoğraf Dosyası</span>
-          <input type="file" accept="image/*" onChange={chooseFile} />
+          <span>Medya Dosyası</span>
+          <input type="file" accept="image/*,video/*" onChange={chooseFile} />
         </label>
-        {galleryForm.src && <img className="admin-preview" src={galleryForm.src} alt="Seçilen medya" />}
+        {galleryForm.src && <MediaPreview src={galleryForm.src} type={galleryForm.type} />}
       </AdminForm>
       {editingGalleryId && (
         <button type="button" className="outline-btn compact" onClick={() => setEditingGalleryId(null)}>
@@ -659,6 +680,14 @@ function SelectField({ label, value, options, onChange }) {
       </select>
     </label>
   )
+}
+
+function MediaPreview({ src, type }) {
+  if (type === 'video') {
+    return <video className="admin-preview" src={src} controls muted playsInline />
+  }
+
+  return <img className="admin-preview" src={src} alt="Seçilen medya" />
 }
 
 function AdminList({ items, render, actions }) {

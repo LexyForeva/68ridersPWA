@@ -5,7 +5,7 @@ import MotoImage from './MotoImage'
 export default function EventCard({ event, joined = false, onToggle }) {
   return (
     <article className="event-card rich">
-      <MotoImage type={event.image} label={event.distance} />
+      <MotoImage type={event.image} label={event.distance} src={event.src} />
       <div className="event-info">
         <h3>{event.title}</h3>
         <p>

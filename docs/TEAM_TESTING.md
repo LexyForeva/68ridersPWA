@@ -9,6 +9,7 @@ Bu dosya uygulamayi ekip uyelerine acmak ve gelen hatalari duzenli takip etmek i
    - `supabase/migrations/002_membership_applications.sql`
    - `supabase/migrations/003_feedback_reports.sql`
    - `supabase/migrations/004_security_hardening.sql`
+   - `supabase/migrations/005_media_and_chat_fixes.sql`
 2. Projeyi Vercel'e bagla.
 3. Vercel Environment Variables alanina sunlari ekle:
    - `VITE_SUPABASE_URL`

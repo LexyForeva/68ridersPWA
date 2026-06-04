@@ -40,7 +40,7 @@ export default function Home() {
       <Header />
 
       <GlassCard className="hero-card premium">
-        <MotoImage type={featuredEvent.image} />
+        <MotoImage type={featuredEvent.image} src={featuredEvent.src} />
         <div className="hero-copy">
           <span className="eyebrow">BUGÜNKÜ SÜRÜŞ PLANI</span>
           <h1>{featuredEvent.title}</h1>

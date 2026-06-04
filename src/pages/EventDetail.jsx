@@ -38,7 +38,7 @@ export default function EventDetail() {
       </div>
 
       <GlassCard className="detail-hero">
-        <MotoImage type={event.image} />
+        <MotoImage type={event.image} src={event.src} />
         <div>
           <span className="eyebrow">{event.status}</span>
           <h2>{event.title}</h2>

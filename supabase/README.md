@@ -1,7 +1,7 @@
 # 68 Riders Supabase Kurulumu
 
 1. Supabase projesi oluştur.
-2. `supabase/migrations/001_initial_schema.sql` dosyasını Supabase SQL Editor içinde çalıştır.
+2. `supabase/migrations` klasöründeki `001` ile `005` arasındaki SQL dosyalarını sırayla Supabase SQL Editor içinde çalıştır.
 3. Project Settings > API ekranından URL ve anon key değerlerini al.
 4. Proje kökünde `.env` oluştur:
 

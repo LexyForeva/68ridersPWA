@@ -40,6 +40,40 @@ const dataUrlToBlob = async (dataUrl) => {
   return response.blob()
 }
 
+const extensionFromMime = (mimeType = '') =>
+  ({
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+    'image/gif': 'gif',
+    'video/mp4': 'mp4',
+    'video/webm': 'webm',
+    'video/quicktime': 'mov',
+    'audio/webm': 'webm',
+    'audio/mpeg': 'mp3',
+    'application/pdf': 'pdf',
+  }[mimeType] || mimeType.split('/')[1] || 'bin')
+
+const safeStorageName = (value = 'media') =>
+  String(value)
+    .trim()
+    .replace(/[^a-zA-Z0-9._-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48) || 'media'
+
+const uploadDataUrl = async (bucket, dataUrl, folder, title) => {
+  const blob = await dataUrlToBlob(dataUrl)
+  const extension = extensionFromMime(blob.type)
+  const path = `${folder}/${Date.now()}-${safeStorageName(title)}.${extension}`
+  const { error } = await supabase.storage.from(bucket).upload(path, blob, {
+    cacheControl: '3600',
+    upsert: false,
+    contentType: blob.type || 'application/octet-stream',
+  })
+  if (error) return { error }
+  return { filePath: path, publicImageUrl: publicUrl(bucket, path) }
+}
+
 const inferRoleKey = (role, fallback = 'member') => {
   const value = String(role || '').toLocaleLowerCase('tr-TR')
   if (['founder', 'admin', 'moderator', 'member'].includes(value)) return value
@@ -86,6 +120,7 @@ const eventFromDb = (event) => ({
   place: event.location || '68 Riders Garaj',
   people: event.attendees_count || 0,
   image: event.image_type || 'ride',
+  src: event.file_path ? publicUrl(event.bucket || 'event-images', event.file_path) : event.public_url || '',
   status: event.status_text || 'Katılım açık',
   distance: event.distance || 'Demo rota',
   pace: event.pace || 'Orta tempo',
@@ -192,7 +227,7 @@ export function AppProvider({ children }) {
     readStored('68riders:announcements', copyList(seedAnnouncements)),
   )
   const [gallery, setGallery] = useState(() => readStored('68riders:gallery', copyList(seedGallery)))
-  const [messages, setMessages] = useState(() => copyList(seedMessages))
+  const [messages, setMessages] = useState(() => readStored('68riders:messages', copyList(seedMessages)))
   const [feedbackReports, setFeedbackReports] = useState(() => readStored('68riders:feedbackReports', []))
   const [moderationActions, setModerationActions] = useState(() => readStored('68riders:moderationActions', []))
   const [members, setMembers] = useState(() =>
@@ -232,6 +267,7 @@ export function AppProvider({ children }) {
   useEffect(() => writeStored('68riders:events', events), [events])
   useEffect(() => writeStored('68riders:announcements', announcements), [announcements])
   useEffect(() => writeStored('68riders:gallery', gallery), [gallery])
+  useEffect(() => writeStored('68riders:messages', messages), [messages])
   useEffect(() => writeStored('68riders:feedbackReports', feedbackReports), [feedbackReports])
   useEffect(() => writeStored('68riders:moderationActions', moderationActions), [moderationActions])
   useEffect(() => writeStored('68riders:members', members), [members])
@@ -318,21 +354,24 @@ export function AppProvider({ children }) {
 
   const updateUser = useCallback(
     async (data) => {
-      setCurrentUser((user) => ({ ...user, ...data }))
+      const cleanData = Object.fromEntries(
+        Object.entries(data || {}).filter(([, value]) => value !== undefined && value !== null),
+      )
+      setCurrentUser((user) => ({ ...user, ...cleanData }))
       if (realBackend && supabase && auth.user?.id) {
-        const { error } = await supabase
-          .from('profiles')
-          .update({
-            full_name: data.name,
-            email: data.email,
-            phone: data.phone,
-            city: data.city,
-            bike: data.bike,
-            blood: data.blood,
-            emergency_name: data.emergencyName,
-            emergency_phone: data.emergencyPhone,
-          })
-          .eq('id', auth.user.id)
+        const profilePatch = {}
+        if ('name' in cleanData) profilePatch.full_name = cleanData.name
+        if ('email' in cleanData) profilePatch.email = cleanData.email
+        if ('phone' in cleanData) profilePatch.phone = cleanData.phone
+        if ('city' in cleanData) profilePatch.city = cleanData.city
+        if ('bike' in cleanData) profilePatch.bike = cleanData.bike
+        if ('blood' in cleanData) profilePatch.blood = cleanData.blood
+        if ('emergencyName' in cleanData) profilePatch.emergency_name = cleanData.emergencyName
+        if ('emergencyPhone' in cleanData) profilePatch.emergency_phone = cleanData.emergencyPhone
+
+        const { error } = Object.keys(profilePatch).length
+          ? await supabase.from('profiles').update(profilePatch).eq('id', auth.user.id)
+          : { error: null }
         if (!error) auth.refreshProfile()
       }
       notify('Profil bilgileri güncellendi.')
@@ -408,6 +447,21 @@ export function AppProvider({ children }) {
 
   const addEvent = useCallback(
     async (data) => {
+      let filePath = ''
+      let publicImageUrl = data.src || ''
+      let remoteImageReady = !data.src?.startsWith('data:')
+
+      if (realBackend && supabase && data.src?.startsWith('data:')) {
+        const uploaded = await uploadDataUrl('event-images', data.src, auth.user?.id || 'events', data.title || 'event')
+        if (uploaded.error) {
+          notify('Etkinlik görseli kalıcı yüklenemedi. Supabase 005 migration/bucket ayarını kontrol et.', 'warning')
+        } else {
+          filePath = uploaded.filePath
+          publicImageUrl = uploaded.publicImageUrl
+          remoteImageReady = true
+        }
+      }
+
       const nextEvent = {
         id: Date.now(),
         title: data.title || 'Yeni Demo Etkinlik',
@@ -416,6 +470,7 @@ export function AppProvider({ children }) {
         place: data.place || '68 Riders Garaj',
         people: Number(data.people || 0),
         image: data.image || 'ride',
+        src: publicImageUrl,
         status: data.status || 'Katılım açık',
         distance: data.distance || 'Demo rota',
         pace: data.pace || 'Orta tempo',
@@ -423,7 +478,7 @@ export function AppProvider({ children }) {
         details: data.details || 'Kurucu panelinden eklenen demo etkinlik.',
       }
 
-      if (realBackend && supabase) {
+      if (realBackend && supabase && remoteImageReady) {
         const { data: inserted, error } = await supabase
           .from('events')
           .insert({
@@ -437,11 +492,15 @@ export function AppProvider({ children }) {
             details: nextEvent.details,
             status_text: nextEvent.status,
             image_type: nextEvent.image,
+            bucket: filePath ? 'event-images' : null,
+            file_path: filePath || null,
+            public_url: filePath ? null : nextEvent.src || null,
             attendees_count: nextEvent.people,
             created_by: auth.user?.id,
           })
           .select()
           .single()
+        if (error) notify('Etkinlik Supabase’e kaydedilemedi. 005 media migration çalışmalı.', 'warning')
         if (!error && inserted) nextEvent.id = inserted.id
       }
 
@@ -489,16 +548,17 @@ export function AppProvider({ children }) {
     async (data) => {
       let filePath = ''
       let publicImageUrl = data.src || ''
+      let remoteMediaReady = !data.src?.startsWith('data:')
 
       if (realBackend && supabase && data.src?.startsWith('data:')) {
-        const blob = await dataUrlToBlob(data.src)
-        filePath = `${auth.user?.id || 'member'}/${Date.now()}-${data.title || 'media'}.png`
-        const { error } = await supabase.storage.from('gallery').upload(filePath, blob, {
-          cacheControl: '3600',
-          upsert: false,
-          contentType: blob.type || 'image/png',
-        })
-        if (!error) publicImageUrl = publicUrl('gallery', filePath)
+        const uploaded = await uploadDataUrl('gallery', data.src, auth.user?.id || 'member', data.title || 'media')
+        if (uploaded.error) {
+          notify('Galeri medyası kalıcı yüklenemedi. Supabase Storage policy ayarını kontrol et.', 'warning')
+        } else {
+          filePath = uploaded.filePath
+          publicImageUrl = uploaded.publicImageUrl
+          remoteMediaReady = true
+        }
       }
 
       const nextItem = {
@@ -512,7 +572,7 @@ export function AppProvider({ children }) {
         uploadedBy: currentUser.name,
       }
 
-      if (realBackend && supabase) {
+      if (realBackend && supabase && remoteMediaReady) {
         const { data: inserted, error } = await supabase
           .from('gallery_items')
           .insert({
@@ -528,6 +588,7 @@ export function AppProvider({ children }) {
           })
           .select()
           .single()
+        if (error) notify('Galeri medyası Supabase’e kaydedilemedi. Storage ve tablo ayarlarını kontrol et.', 'warning')
         if (!error && inserted) nextItem.id = inserted.id
       }
 
@@ -540,6 +601,21 @@ export function AppProvider({ children }) {
 
   const updateEvent = useCallback(
     async (eventId, data) => {
+      let filePath = ''
+      let publicImageUrl = data.src || ''
+      let remoteImageReady = !data.src?.startsWith('data:')
+
+      if (realBackend && supabase && data.src?.startsWith('data:')) {
+        const uploaded = await uploadDataUrl('event-images', data.src, auth.user?.id || 'events', data.title || 'event')
+        if (uploaded.error) {
+          notify('Etkinlik görseli güncellenemedi. Supabase 005 migration/bucket ayarını kontrol et.', 'warning')
+        } else {
+          filePath = uploaded.filePath
+          publicImageUrl = uploaded.publicImageUrl
+          remoteImageReady = true
+        }
+      }
+
       const patch = {
         title: data.title || 'Etkinlik',
         date: data.date || 'Haziran 2026',
@@ -549,13 +625,14 @@ export function AppProvider({ children }) {
         details: data.details || '',
         status: data.status || 'Katılım açık',
         image: data.image || 'ride',
+        src: publicImageUrl,
         pace: data.pace || 'Orta tempo',
         meetingPoint: data.meetingPoint || data.place || '68 Riders Garaj',
         people: Number(data.people || 0),
       }
 
-      if (realBackend && supabase) {
-        await supabase
+      if (realBackend && supabase && remoteImageReady) {
+        const { error } = await supabase
           .from('events')
           .update({
             title: patch.title,
@@ -566,18 +643,22 @@ export function AppProvider({ children }) {
             details: patch.details,
             status_text: patch.status,
             image_type: patch.image,
+            bucket: filePath ? 'event-images' : null,
+            file_path: filePath || null,
+            public_url: filePath ? null : patch.src || null,
             pace: patch.pace,
             meeting_point: patch.meetingPoint,
             attendees_count: patch.people,
           })
           .eq('id', eventId)
+        if (error) notify('Etkinlik Supabase’de güncellenemedi. 005 media migration çalışmalı.', 'warning')
       }
 
       setEvents((current) => current.map((event) => (event.id === eventId ? { ...event, ...patch } : event)))
       notify('Etkinlik güncellendi.')
       addActivity(`${patch.title} etkinliği güncellendi.`)
     },
-    [addActivity, notify, realBackend],
+    [addActivity, auth.user?.id, notify, realBackend],
   )
 
   const deleteEvent = useCallback(
@@ -623,22 +704,46 @@ export function AppProvider({ children }) {
 
   const updateGalleryItem = useCallback(
     async (itemId, data) => {
+      let filePath = ''
+      let publicImageUrl = data.src || ''
+      let remoteMediaReady = !data.src?.startsWith('data:')
+
+      if (realBackend && supabase && data.src?.startsWith('data:')) {
+        const uploaded = await uploadDataUrl('gallery', data.src, auth.user?.id || 'member', data.title || 'media')
+        if (uploaded.error) {
+          notify('Galeri medyası güncellenemedi. Supabase Storage ayarını kontrol et.', 'warning')
+        } else {
+          filePath = uploaded.filePath
+          publicImageUrl = uploaded.publicImageUrl
+          remoteMediaReady = true
+        }
+      }
+
       const patch = {
         title: data.title || 'Medya',
         type: data.type || 'photo',
         image: data.image || 'ride',
+        src: publicImageUrl,
       }
-      if (realBackend && supabase) {
-        await supabase
+      if (realBackend && supabase && remoteMediaReady) {
+        const { error } = await supabase
           .from('gallery_items')
-          .update({ title: patch.title, media_type: patch.type, image_type: patch.image })
+          .update({
+            title: patch.title,
+            media_type: patch.type,
+            image_type: patch.image,
+            bucket: filePath ? 'gallery' : null,
+            file_path: filePath || null,
+            public_url: filePath ? null : patch.src || null,
+          })
           .eq('id', itemId)
+        if (error) notify('Galeri medyası Supabase’de güncellenemedi. Storage ve tablo ayarlarını kontrol et.', 'warning')
       }
       setGallery((current) => current.map((item) => (item.id === itemId ? { ...item, ...patch } : item)))
       notify('Galeri medyası güncellendi.')
       addActivity(`${patch.title} galeri medyası güncellendi.`)
     },
-    [addActivity, notify, realBackend],
+    [addActivity, auth.user?.id, notify, realBackend],
   )
 
   const deleteGalleryItem = useCallback(

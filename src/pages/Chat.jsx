@@ -24,25 +24,71 @@ import { useAppData } from '../context/AppContext'
 import { publicUrl, supabase } from '../lib/supabase'
 
 const ROOM_ID = '00000000-0000-0000-0000-000000000068'
+const CHAT_STORAGE_KEY = '68riders:chatMessages:v1'
+const LOCAL_FILE_LIMIT_BYTES = 5 * 1024 * 1024
 const reactions = ['👍', '❤️', '🔥', '👏', '🏍️']
+const quickEmojis = [...reactions, '😂', '😎', '🙌', '🙏', '✅', '⚠️']
 
 const fileToPathName = (name) => `${Date.now()}-${name.replace(/[^a-zA-Z0-9._-]/g, '-')}`
+
+const fileToDataUrl = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+
+const seedToChatMessages = (messages) =>
+  messages.map((message) => ({
+    id: message.id,
+    sender_name: message.from,
+    body: message.text,
+    message_type: 'text',
+    me: message.me,
+    created_at: new Date().toISOString(),
+  }))
+
+const readLocalMessages = (seedMessages) => {
+  if (typeof window === 'undefined') return seedToChatMessages(seedMessages)
+  try {
+    const raw = window.localStorage.getItem(CHAT_STORAGE_KEY)
+    const parsed = raw ? JSON.parse(raw) : null
+    return Array.isArray(parsed) && parsed.length ? parsed : seedToChatMessages(seedMessages)
+  } catch {
+    return seedToChatMessages(seedMessages)
+  }
+}
+
+const writeLocalMessages = (messages) => {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages.slice(-200)))
+  } catch {
+    // Media-heavy demo conversations can exceed browser storage.
+  }
+}
+
+const summarizeReactions = (rows = []) =>
+  rows.reduce((summary, row) => {
+    const emoji = row.emoji || row
+    if (!emoji) return summary
+    const count = Number(row.count || 1)
+    const found = summary.find((item) => item.emoji === emoji)
+    if (found) found.count += count
+    else summary.push({ emoji, count })
+    return summary
+  }, [])
+
+const normalizeReactionSummary = (message) => summarizeReactions(message.reactions || message.message_reactions || [])
 
 export default function Chat() {
   const auth = useAuth()
   const app = useAppData()
-  const [messages, setMessages] = useState(() =>
-    app.messages.map((message) => ({
-      id: message.id,
-      sender_name: message.from,
-      body: message.text,
-      message_type: 'text',
-      me: message.me,
-      created_at: new Date().toISOString(),
-    })),
-  )
+  const [messages, setMessages] = useState(() => readLocalMessages(app.messages))
   const [draft, setDraft] = useState('')
   const [attachOpen, setAttachOpen] = useState(false)
+  const [emojiOpen, setEmojiOpen] = useState(false)
   const [replyTo, setReplyTo] = useState(null)
   const [editing, setEditing] = useState(null)
   const [typing, setTyping] = useState('')
@@ -61,6 +107,14 @@ export default function Chat() {
 
   const realChat = auth.realMode && auth.isActive && supabase
 
+  const commitMessages = (updater) => {
+    setMessages((current) => {
+      const next = typeof updater === 'function' ? updater(current) : updater
+      if (!realChat) writeLocalMessages(next)
+      return next
+    })
+  }
+
   const sortedMessages = useMemo(
     () => [...messages].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)),
     [messages],
@@ -74,12 +128,14 @@ export default function Chat() {
     const loadMessages = async () => {
       const { data, error } = await supabase
         .from('chat_messages')
-        .select('*')
+        .select('*, message_reactions(emoji, profile_id)')
         .eq('room_id', ROOM_ID)
         .order('created_at', { ascending: true })
         .limit(120)
 
-      if (!error && alive) setMessages(data || [])
+      if (!error && alive) {
+        setMessages((data || []).map((message) => ({ ...message, reactions: summarizeReactions(message.message_reactions) })))
+      }
     }
 
     loadMessages()
@@ -147,7 +203,7 @@ export default function Chat() {
         return
       }
     } else {
-      setMessages((current) => [...current, localMessage])
+      commitMessages((current) => [...current, localMessage])
     }
 
     setReplyTo(null)
@@ -162,7 +218,7 @@ export default function Chat() {
       if (realChat) {
         await supabase.from('chat_messages').update({ body: clean, edited_at: new Date().toISOString() }).eq('id', editing.id)
       }
-      setMessages((current) =>
+      commitMessages((current) =>
         current.map((message) => (message.id === editing.id ? { ...message, body: clean, edited_at: new Date().toISOString() } : message)),
       )
       setEditing(null)
@@ -198,7 +254,12 @@ export default function Chat() {
       return
     }
 
-    const public_url = URL.createObjectURL(file)
+    if (file.size > LOCAL_FILE_LIMIT_BYTES) {
+      app.notify('Büyük medya kalıcı kayıt için Supabase Storage ister. Demo modda 5 MB altı dosyalar saklanır.', 'warning')
+      return
+    }
+
+    const public_url = await fileToDataUrl(file)
     await insertMessage({ body: file.name, message_type: messageType, public_url })
   }
 
@@ -239,13 +300,31 @@ export default function Chat() {
     if (realChat) {
       await supabase.from('chat_messages').update({ deleted_at: new Date().toISOString(), body: '' }).eq('id', message.id)
     }
-    setMessages((current) => current.map((item) => (item.id === message.id ? { ...item, deleted_at: new Date().toISOString(), body: '' } : item)))
+    commitMessages((current) => current.map((item) => (item.id === message.id ? { ...item, deleted_at: new Date().toISOString(), body: '' } : item)))
   }
 
   const reactToMessage = async (message, emoji) => {
     if (realChat) {
-      await supabase.from('message_reactions').insert({ message_id: message.id, profile_id: auth.user.id, emoji })
+      const { error } = await supabase.from('message_reactions').insert({ message_id: message.id, profile_id: auth.user.id, emoji })
+      if (error?.message.toLowerCase().includes('duplicate')) {
+        app.notify('Bu tepki zaten eklendi.', 'warning')
+        return
+      }
+      if (error) {
+        app.notify(error.message, 'warning')
+        return
+      }
     }
+    commitMessages((current) =>
+      current.map((item) => {
+        if (item.id !== message.id) return item
+        const nextReactions = normalizeReactionSummary(item)
+        const found = nextReactions.find((reaction) => reaction.emoji === emoji)
+        if (found) found.count += 1
+        else nextReactions.push({ emoji, count: 1 })
+        return { ...item, reactions: nextReactions }
+      }),
+    )
     app.notify(`${emoji} tepki gönderildi.`)
   }
 
@@ -331,11 +410,28 @@ export default function Chat() {
         </div>
       )}
 
+      {emojiOpen && (
+        <div className="emoji-menu glass">
+          {quickEmojis.map((emoji) => (
+            <button
+              key={emoji}
+              type="button"
+              onClick={() => {
+                setDraft((current) => `${current}${emoji}`)
+                setEmojiOpen(false)
+              }}
+            >
+              {emoji}
+            </button>
+          ))}
+        </div>
+      )}
+
       <form className="chat-input" onSubmit={handleSubmit}>
         <button type="button" className="chat-tool" onClick={() => setAttachOpen((open) => !open)} aria-label="Ek ekle">
           {attachOpen ? <X size={20} /> : <Plus size={22} />}
         </button>
-        <button type="button" className="chat-tool" aria-label="Emoji">
+        <button type="button" className="chat-tool" onClick={() => setEmojiOpen((open) => !open)} aria-label="Emoji">
           <Smile size={20} />
         </button>
         <input
@@ -382,11 +478,21 @@ export default function Chat() {
 function MessageBubble({ message, me, onReply, onEdit, onDelete, onReact }) {
   const deleted = Boolean(message.deleted_at)
   const mediaUrl = message.public_url || (message.bucket && message.file_path ? publicUrl(message.bucket, message.file_path) : '')
+  const messageReactions = normalizeReactionSummary(message)
 
   return (
     <div className={`bubble ${me ? 'me' : ''}`}>
       <small>{message.sender_name || (me ? 'Sen' : 'Üye')}</small>
       {deleted ? <p>Bu mesaj silindi.</p> : <MessageContent message={message} mediaUrl={mediaUrl} />}
+      {!!messageReactions.length && (
+        <div className="reaction-strip">
+          {messageReactions.map((reaction) => (
+            <span key={reaction.emoji}>
+              {reaction.emoji} {reaction.count > 1 ? reaction.count : ''}
+            </span>
+          ))}
+        </div>
+      )}
       <div className="message-meta">
         <span>{message.edited_at ? 'Düzenlendi' : new Date(message.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
         {me && <CheckCheck size={13} />}
@@ -410,7 +516,12 @@ function MessageContent({ message, mediaUrl }) {
   if (message.message_type === 'document') return <a className="chat-document" href={mediaUrl} target="_blank" rel="noreferrer"><FileText size={16} /> {message.body}</a>
   if (message.message_type === 'event') return <GlassCard className="shared-event"><CalendarDays size={16} /><span>{message.body}</span></GlassCard>
   if (message.message_type === 'poll') {
-    const poll = JSON.parse(message.body || '{"question":"","options":[]}')
+    let poll = { question: '', options: [] }
+    try {
+      poll = JSON.parse(message.body || '{"question":"","options":[]}')
+    } catch {
+      poll = { question: message.body || 'Anket', options: [] }
+    }
     return (
       <div className="poll-card">
         <b>{poll.question}</b>

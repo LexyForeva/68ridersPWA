@@ -1,7 +1,16 @@
 import { useId } from 'react'
 
-export default function MotoImage({ type = 'ride', label = '' }) {
+export default function MotoImage({ type = 'ride', label = '', src = '' }) {
   const gradientId = `road-${useId().replace(/:/g, '')}`
+
+  if (src) {
+    return (
+      <div className={`moto-img custom ${type}`} aria-label={label || '68 Riders görseli'}>
+        <img src={src} alt={label || '68 Riders görseli'} />
+        {label && <span>{label}</span>}
+      </div>
+    )
+  }
 
   return (
     <div className={`moto-img ${type}`} aria-label={label || '68 Riders motosiklet görseli'}>
