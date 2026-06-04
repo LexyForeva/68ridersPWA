@@ -41,7 +41,7 @@ export default function App() {
           <Route path="/admin" element={<ProtectedRoute adminOnly><Admin /></ProtectedRoute>} />
           <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
           <Route path="/feedback" element={<ProtectedRoute><Feedback /></ProtectedRoute>} />
-          <Route path="*" element={<Home />} />
+          <Route path="*" element={<ProtectedRoute><Home /></ProtectedRoute>} />
         </Routes>
       </Suspense>
       {showNav && <BottomNav />}

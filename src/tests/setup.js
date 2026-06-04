@@ -31,7 +31,7 @@ Object.defineProperty(window, 'matchMedia', {
 })
 
 // Mock IntersectionObserver
-global.IntersectionObserver = class IntersectionObserver {
+globalThis.IntersectionObserver = class IntersectionObserver {
   constructor() {}
   disconnect() {}
   observe() {}
@@ -42,7 +42,7 @@ global.IntersectionObserver = class IntersectionObserver {
 }
 
 // Mock ResizeObserver
-global.ResizeObserver = class ResizeObserver {
+globalThis.ResizeObserver = class ResizeObserver {
   constructor() {}
   disconnect() {}
   observe() {}
@@ -56,7 +56,7 @@ const localStorageMock = {
   removeItem: vi.fn(),
   clear: vi.fn(),
 }
-global.localStorage = localStorageMock
+globalThis.localStorage = localStorageMock
 
 // Mock sessionStorage
 const sessionStorageMock = {
@@ -65,10 +65,10 @@ const sessionStorageMock = {
   removeItem: vi.fn(),
   clear: vi.fn(),
 }
-global.sessionStorage = sessionStorageMock
+globalThis.sessionStorage = sessionStorageMock
 
 // Mock fetch
-global.fetch = vi.fn()
+globalThis.fetch = vi.fn()
 
 // Mock navigator
 Object.defineProperty(window, 'navigator', {
@@ -89,7 +89,7 @@ Object.defineProperty(window, 'navigator', {
 
 // Suppress console errors in tests (optional)
 if (process.env.VITEST_ENV === 'test') {
-  global.console = {
+  globalThis.console = {
     ...console,
     error: vi.fn(),
     warn: vi.fn(),

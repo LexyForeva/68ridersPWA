@@ -1,10 +1,12 @@
 {
   "name": "68 RIDERS",
   "short_name": "68 Riders",
+  "id": "/",
   "description": "68 Riders Aksaray Motorcycle Community PWA",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "fullscreen"],
   "orientation": "portrait",
   "background_color": "#09090b",
   "theme_color": "#ef232b",
@@ -43,14 +45,7 @@
       "purpose": "any"
     }
   ],
-  "screenshots": [
-    {
-      "src": "/screenshots/home.png",
-      "sizes": "540x720",
-      "type": "image/png",
-      "form_factor": "narrow"
-    }
-  ],
+  "prefer_related_applications": false,
   "shortcuts": [
     {
       "name": "Etkinlikler",

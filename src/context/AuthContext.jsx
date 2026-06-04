@@ -3,6 +3,8 @@ import { isSupabaseConfigured, supabase } from '../lib/supabase'
 
 const AuthContext = createContext(null)
 
+const demoAdminEnabled = import.meta.env.VITE_DEMO_ADMIN === 'true'
+
 const founderProfile = {
   id: 'demo-founder',
   member_no: '68123',
@@ -13,9 +15,15 @@ const founderProfile = {
   blood: 'A Rh+',
 }
 
+const memberProfile = {
+  ...founderProfile,
+  id: 'demo-member',
+  role: 'member',
+}
+
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
-  const [profile, setProfile] = useState(isSupabaseConfigured ? null : founderProfile)
+  const [profile, setProfile] = useState(isSupabaseConfigured ? null : demoAdminEnabled ? founderProfile : memberProfile)
   const [loading, setLoading] = useState(isSupabaseConfigured)
 
   const loadProfile = useCallback(async (userId) => {
@@ -99,11 +107,12 @@ export function AuthProvider({ children }) {
     const isActive = !realMode || status === 'active'
     const isPending = realMode && status === 'pending'
     const isBlocked = realMode && ['banned', 'removed', 'rejected'].includes(status)
-    const isAdmin = !realMode || ['founder', 'admin', 'moderator'].includes(role)
-    const isFounder = !realMode || role === 'founder'
+    const isAdmin = ['founder', 'admin', 'moderator'].includes(role)
+    const isFounder = role === 'founder'
 
     return {
       realMode,
+      demoAdminEnabled,
       loading,
       session,
       user: session?.user || null,

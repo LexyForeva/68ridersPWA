@@ -85,7 +85,8 @@ The app will open at `http://localhost:5173`
 If you don't configure Supabase credentials, the app runs in **demo mode** with:
 - Mock data for all features
 - LocalStorage persistence
-- Automatic founder login
+- Member-level access by default
+- Optional founder UI testing with `VITE_DEMO_ADMIN=true`
 - Full UI/UX testing capability
 
 ---

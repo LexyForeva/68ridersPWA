@@ -7,7 +7,6 @@ import {
   Image,
   Mic,
   MoreVertical,
-  Paperclip,
   Phone,
   Plus,
   Send,
@@ -516,7 +515,7 @@ function MessageContent({ message, mediaUrl }) {
   if (message.message_type === 'document') return <a className="chat-document" href={mediaUrl} target="_blank" rel="noreferrer"><FileText size={16} /> {message.body}</a>
   if (message.message_type === 'event') return <GlassCard className="shared-event"><CalendarDays size={16} /><span>{message.body}</span></GlassCard>
   if (message.message_type === 'poll') {
-    let poll = { question: '', options: [] }
+    let poll
     try {
       poll = JSON.parse(message.body || '{"question":"","options":[]}')
     } catch {

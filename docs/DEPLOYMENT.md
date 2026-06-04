@@ -38,9 +38,11 @@ Environment Variables:
 VITE_SUPABASE_URL=https://PROJECT_ID.supabase.co
 VITE_SUPABASE_ANON_KEY=...
 VITE_VAPID_PUBLIC_KEY=...
+VITE_DEMO_ADMIN=false
 ```
 
 `VITE_VAPID_PUBLIC_KEY` push acilana kadar bos kalabilir.
+`VITE_DEMO_ADMIN` production ortaminda `false` kalmalidir; sadece Supabase olmadan lokal admin arayuzu test edilecekse `true` yapilir.
 
 ## 4. Supabase Auth URL
 

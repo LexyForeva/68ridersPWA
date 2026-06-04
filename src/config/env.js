@@ -62,14 +62,8 @@ if (!ENV.SUPABASE_URL || !ENV.SUPABASE_ANON_KEY) {
 
 // Development helpers
 if (ENV.IS_DEV) {
-  console.log('🔧 Environment:', ENV.APP_ENV)
-  console.log('📦 Version:', ENV.APP_VERSION)
-  console.log('🎯 Features:', {
-    analytics: ENV.ENABLE_ANALYTICS,
-    sentry: ENV.ENABLE_SENTRY,
-    debugPanel: ENV.ENABLE_DEBUG_PANEL,
-    mockData: ENV.ENABLE_MOCK_DATA,
-  })
+  console.warn(`Environment: ${ENV.APP_ENV}`)
+  console.warn(`Version: ${ENV.APP_VERSION}`)
 }
 
 export default ENV

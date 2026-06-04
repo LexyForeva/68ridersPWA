@@ -44,6 +44,8 @@ export default [
         Notification: 'readonly',
         IntersectionObserver: 'readonly',
         ResizeObserver: 'readonly',
+        globalThis: 'readonly',
+        setTimeout: 'readonly',
         process: 'readonly',
       },
       parserOptions: {
@@ -62,7 +64,7 @@ export default [
       'react/jsx-uses-vars': 'error',
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
-      'react-refresh/only-export-components': 'warn',
+      'react-refresh/only-export-components': 'off',
       'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       'no-console': ['warn', { allow: ['warn', 'error'] }],
     },

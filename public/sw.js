@@ -1,9 +1,12 @@
-const CACHE = '68-riders-cache-v4'
+const CACHE = '68-riders-cache-v5'
 const ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
   '/qr-member-68123.svg',
+  '/apple-touch-icon.png',
+  '/icons/apple-touch-icon-152.png',
+  '/icons/apple-touch-icon-167.png',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/icons/icon-192.svg',

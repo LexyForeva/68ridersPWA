@@ -18,22 +18,25 @@ import GlassCard from '../components/GlassCard'
 import Header from '../components/Header'
 import MotoImage from '../components/MotoImage'
 import { useAppData } from '../context/AppContext'
+import { useAuth } from '../context/AuthContext'
 
 const shortcuts = [
-  ['/qr', QrCode, 'Üyelik Kartım'],
-  ['/events', Calendar, 'Etkinlikler'],
-  ['/announcements', Megaphone, 'Duyurular'],
-  ['/gallery', Image, 'Galeri'],
-  ['/chat', MessageCircle, 'Ekip Sohbeti'],
-  ['/admin', ShieldCheck, 'Yönetim'],
-  ['/feedback', Bug, 'Hata Bildir'],
+  { to: '/qr', icon: QrCode, label: 'Üyelik Kartım' },
+  { to: '/events', icon: Calendar, label: 'Etkinlikler' },
+  { to: '/announcements', icon: Megaphone, label: 'Duyurular' },
+  { to: '/gallery', icon: Image, label: 'Galeri' },
+  { to: '/chat', icon: MessageCircle, label: 'Ekip Sohbeti' },
+  { to: '/admin', icon: ShieldCheck, label: 'Yönetim', adminOnly: true },
+  { to: '/feedback', icon: Bug, label: 'Hata Bildir' },
 ]
 
 export default function Home() {
   const location = useLocation()
+  const auth = useAuth()
   const { events, announcements, activity, isJoined, toggleJoin } = useAppData()
   const featuredEvent = events[0]
   const joined = isJoined(featuredEvent.id)
+  const visibleShortcuts = shortcuts.filter((shortcut) => !shortcut.adminOnly || auth.isAdmin)
 
   return (
     <section className="screen page">
@@ -71,7 +74,7 @@ export default function Home() {
 
       <h2>Hızlı Erişim</h2>
       <div className="shortcut-grid">
-        {shortcuts.map(([to, Icon, label]) => (
+        {visibleShortcuts.map(({ to, icon: Icon, label }) => (
           <Link className="shortcut" to={to} state={to === '/feedback' ? { from: location.pathname } : undefined} key={label}>
             <Icon size={25} />
             <span>{label}</span>

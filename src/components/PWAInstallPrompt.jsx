@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Download, RefreshCw, X, Share, Plus } from 'lucide-react'
+import { Download, ExternalLink, RefreshCw, X, Share, Plus } from 'lucide-react'
+
+const DISMISS_KEY = '68riders:pwa-install-dismissed:v2'
 
 const isStandalone = () =>
   window.matchMedia?.('(display-mode: standalone)').matches ||
@@ -8,17 +10,23 @@ const isStandalone = () =>
 
 const isIOS = () => {
   const userAgent = window.navigator.userAgent.toLowerCase()
-  return /iphone|ipad|ipod/.test(userAgent)
+  const platform = window.navigator.platform
+  return /iphone|ipad|ipod/.test(userAgent) || (platform === 'MacIntel' && window.navigator.maxTouchPoints > 1)
 }
 
 const isInStandaloneMode = () => isStandalone()
+
+const isIOSSafari = () => {
+  const userAgent = window.navigator.userAgent
+  return isIOS() && /Safari/i.test(userAgent) && !/CriOS|FxiOS|EdgiOS|OPiOS/i.test(userAgent)
+}
 
 export default function PWAInstallPrompt() {
   const [installPrompt, setInstallPrompt] = useState(null)
   const [updateReady, setUpdateReady] = useState(false)
   const [dismissed, setDismissed] = useState(() => {
     try {
-      return localStorage.getItem('pwa-install-dismissed') === 'true'
+      return localStorage.getItem(DISMISS_KEY) === 'true'
     } catch (error) {
       // Ignore storage errors
       console.warn('Failed to read dismiss state:', error)
@@ -42,7 +50,7 @@ export default function PWAInstallPrompt() {
       setInstallPrompt(null)
       setDismissed(true)
       try {
-        localStorage.setItem('pwa-install-dismissed', 'true')
+        localStorage.setItem(DISMISS_KEY, 'true')
       } catch (error) {
         // Ignore storage errors
         console.warn('Failed to save install state:', error)
@@ -75,7 +83,7 @@ export default function PWAInstallPrompt() {
     setDismissed(true)
     setShowIOSPrompt(false)
     try {
-      localStorage.setItem('pwa-install-dismissed', 'true')
+      localStorage.setItem(DISMISS_KEY, 'true')
     } catch (error) {
       // Ignore storage errors
       console.warn('Failed to save dismiss state:', error)
@@ -99,17 +107,25 @@ export default function PWAInstallPrompt() {
 
   // iOS-specific install prompt
   if (showIOSPrompt) {
+    const safari = isIOSSafari()
+
     return (
       <div className="pwa-banner ios-install-prompt">
-        <Download size={18} />
+        {safari ? <Download size={18} /> : <ExternalLink size={18} />}
         <div className="ios-instructions">
-          <b>68 Riders ana ekranına ekle</b>
+          <b>{safari ? '68 Riders ana ekranına ekle' : 'iPhone için Safari ile aç'}</b>
           <span className="ios-steps">
-            1. Safari'de alttaki <Share size={14} className="inline-icon" /> (Paylaş) butonuna bas
+            {!safari && (
+              <>
+                1. Bu sayfayı Safari'de aç
+                <br />
+              </>
+            )}
+            {safari ? '1' : '2'}. Safari'de alttaki <Share size={14} className="inline-icon" /> (Paylaş) butonuna bas
             <br />
-            2. Aşağı kaydır ve <Plus size={14} className="inline-icon" /> "Ana Ekrana Ekle" seç
+            {safari ? '2' : '3'}. Aşağı kaydır ve <Plus size={14} className="inline-icon" /> "Ana Ekrana Ekle" seç
             <br />
-            3. Sağ üstteki "Ekle" butonuna bas
+            {safari ? '3' : '4'}. Sağ üstteki "Ekle" butonuna bas
           </span>
         </div>
         <button type="button" className="banner-close" onClick={handleDismiss} aria-label="Kapat">
