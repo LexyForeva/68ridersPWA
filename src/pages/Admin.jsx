@@ -300,17 +300,32 @@ function EventManagement({ app }) {
     distance: '64 km',
     details: 'Kurucu panelinden oluşturulan rota.',
   })
+  const [editingEventId, setEditingEventId] = useState(null)
 
   const update = (key, value) => setEventForm((current) => ({ ...current, [key]: value }))
 
   const submitEvent = (event) => {
     event.preventDefault()
-    app.addEvent(eventForm)
+    if (editingEventId) app.updateEvent(editingEventId, eventForm)
+    else app.addEvent(eventForm)
+    setEditingEventId(null)
+  }
+
+  const editEvent = (event) => {
+    setEditingEventId(event.id)
+    setEventForm({
+      title: event.title,
+      date: event.date,
+      time: event.time,
+      place: event.place,
+      distance: event.distance,
+      details: event.details,
+    })
   }
 
   return (
     <>
-      <AdminForm title="Yeni Etkinlik" onSubmit={submitEvent}>
+      <AdminForm title={editingEventId ? 'Etkinliği Düzenle' : 'Yeni Etkinlik'} onSubmit={submitEvent}>
         <Field label="Başlık" value={eventForm.title} onChange={(value) => update('title', value)} />
         <Field label="Tarih" value={eventForm.date} onChange={(value) => update('date', value)} />
         <Field label="Saat" value={eventForm.time} onChange={(value) => update('time', value)} />
@@ -318,7 +333,21 @@ function EventManagement({ app }) {
         <Field label="Mesafe" value={eventForm.distance} onChange={(value) => update('distance', value)} />
         <TextArea label="Detay" value={eventForm.details} onChange={(value) => update('details', value)} />
       </AdminForm>
-      <AdminList items={app.events} render={(event) => `${event.title} · ${event.date} · +${event.people}`} />
+      {editingEventId && (
+        <button type="button" className="outline-btn compact" onClick={() => setEditingEventId(null)}>
+          Düzenlemeyi iptal et
+        </button>
+      )}
+      <AdminList
+        items={app.events}
+        render={(event) => `${event.title} · ${event.date} · +${event.people}`}
+        actions={(event) => (
+          <>
+            <button type="button" onClick={() => editEvent(event)}>Düzenle</button>
+            <button type="button" className="ghost-danger" onClick={() => app.deleteEvent(event.id)}>Sil</button>
+          </>
+        )}
+      />
     </>
   )
 }
@@ -329,17 +358,29 @@ function AnnouncementManagement({ app }) {
     body: 'Bu hafta yönetim toplantısı garajda yapılacaktır.',
     type: 'event',
   })
+  const [editingAnnouncementId, setEditingAnnouncementId] = useState(null)
 
   const update = (key, value) => setAnnouncementForm((current) => ({ ...current, [key]: value }))
 
   const submitAnnouncement = (event) => {
     event.preventDefault()
-    app.addAnnouncement(announcementForm)
+    if (editingAnnouncementId) app.updateAnnouncement(editingAnnouncementId, announcementForm)
+    else app.addAnnouncement(announcementForm)
+    setEditingAnnouncementId(null)
+  }
+
+  const editAnnouncement = (announcement) => {
+    setEditingAnnouncementId(announcement.id)
+    setAnnouncementForm({
+      title: announcement.title,
+      body: announcement.body,
+      type: announcement.type || 'event',
+    })
   }
 
   return (
     <>
-      <AdminForm title="Yeni Duyuru" onSubmit={submitAnnouncement}>
+      <AdminForm title={editingAnnouncementId ? 'Duyuruyu Düzenle' : 'Yeni Duyuru'} onSubmit={submitAnnouncement}>
         <Field label="Başlık" value={announcementForm.title} onChange={(value) => update('title', value)} />
         <TextArea label="Metin" value={announcementForm.body} onChange={(value) => update('body', value)} />
         <SelectField
@@ -354,19 +395,46 @@ function AnnouncementManagement({ app }) {
           onChange={(value) => update('type', value)}
         />
       </AdminForm>
-      <AdminList items={app.announcements} render={(announcement) => `${announcement.title} · ${announcement.time}`} />
+      {editingAnnouncementId && (
+        <button type="button" className="outline-btn compact" onClick={() => setEditingAnnouncementId(null)}>
+          Düzenlemeyi iptal et
+        </button>
+      )}
+      <AdminList
+        items={app.announcements}
+        render={(announcement) => `${announcement.title} · ${announcement.time}`}
+        actions={(announcement) => (
+          <>
+            <button type="button" onClick={() => editAnnouncement(announcement)}>Düzenle</button>
+            <button type="button" className="ghost-danger" onClick={() => app.deleteAnnouncement(announcement.id)}>Sil</button>
+          </>
+        )}
+      />
     </>
   )
 }
 
 function GalleryManagement({ app }) {
   const [galleryForm, setGalleryForm] = useState({ title: 'Yeni medya', type: 'photo', image: 'ride', src: '' })
+  const [editingGalleryId, setEditingGalleryId] = useState(null)
 
   const update = (key, value) => setGalleryForm((current) => ({ ...current, [key]: value }))
 
   const submitGallery = (event) => {
     event.preventDefault()
-    app.addGalleryItem(galleryForm)
+    if (editingGalleryId) app.updateGalleryItem(editingGalleryId, galleryForm)
+    else app.addGalleryItem(galleryForm)
+    setEditingGalleryId(null)
+  }
+
+  const editGalleryItem = (item) => {
+    setEditingGalleryId(item.id)
+    setGalleryForm({
+      title: item.title,
+      type: item.type,
+      image: item.image,
+      src: item.src || '',
+    })
   }
 
   const chooseFile = async (event) => {
@@ -383,7 +451,7 @@ function GalleryManagement({ app }) {
 
   return (
     <>
-      <AdminForm title="Yeni Medya" onSubmit={submitGallery}>
+      <AdminForm title={editingGalleryId ? 'Medyayı Düzenle' : 'Yeni Medya'} onSubmit={submitGallery}>
         <Field label="Başlık" value={galleryForm.title} onChange={(value) => update('title', value)} />
         <SelectField
           label="Tür"
@@ -410,7 +478,21 @@ function GalleryManagement({ app }) {
         </label>
         {galleryForm.src && <img className="admin-preview" src={galleryForm.src} alt="Seçilen medya" />}
       </AdminForm>
-      <AdminList items={app.gallery} render={(item) => `${item.title} · ${item.type}`} />
+      {editingGalleryId && (
+        <button type="button" className="outline-btn compact" onClick={() => setEditingGalleryId(null)}>
+          Düzenlemeyi iptal et
+        </button>
+      )}
+      <AdminList
+        items={app.gallery}
+        render={(item) => `${item.title} · ${item.type}`}
+        actions={(item) => (
+          <>
+            <button type="button" onClick={() => editGalleryItem(item)}>Düzenle</button>
+            <button type="button" className="ghost-danger" onClick={() => app.deleteGalleryItem(item.id)}>Kaldır</button>
+          </>
+        )}
+      />
     </>
   )
 }
@@ -579,12 +661,13 @@ function SelectField({ label, value, options, onChange }) {
   )
 }
 
-function AdminList({ items, render }) {
+function AdminList({ items, render, actions }) {
   return (
     <div className="admin-list">
       {items.slice(0, 8).map((item) => (
         <GlassCard className="admin-list-item" key={item.id || item}>
-          {render(item)}
+          <span>{render(item)}</span>
+          {actions && <div className="row-actions">{actions(item)}</div>}
         </GlassCard>
       ))}
     </div>

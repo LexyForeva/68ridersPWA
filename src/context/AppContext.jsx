@@ -269,7 +269,9 @@ export function AppProvider({ children }) {
       if (!alive) return
       if (!eventsResult.error) setEvents((eventsResult.data || []).map(eventFromDb))
       if (!announcementsResult.error) setAnnouncements(announcementsResult.data || [])
-      if (!galleryResult.error) setGallery((galleryResult.data || []).map(galleryFromDb))
+      if (!galleryResult.error) {
+        setGallery((galleryResult.data || []).filter((item) => item.status !== 'rejected').map(galleryFromDb))
+      }
       if (!feedbackResult.error) setFeedbackReports((feedbackResult.data || []).map(feedbackFromDb))
       if (!moderationResult.error) setModerationActions((moderationResult.data || []).map(moderationFromDb))
       if (!profilesResult.error) {
@@ -534,6 +536,120 @@ export function AppProvider({ children }) {
       addActivity(`${nextItem.title} galeriye eklendi.`)
     },
     [addActivity, auth.user?.id, currentUser.name, notify, realBackend],
+  )
+
+  const updateEvent = useCallback(
+    async (eventId, data) => {
+      const patch = {
+        title: data.title || 'Etkinlik',
+        date: data.date || 'Haziran 2026',
+        time: data.time || '10:00',
+        place: data.place || '68 Riders Garaj',
+        distance: data.distance || 'Demo rota',
+        details: data.details || '',
+        status: data.status || 'Katılım açık',
+        image: data.image || 'ride',
+        pace: data.pace || 'Orta tempo',
+        meetingPoint: data.meetingPoint || data.place || '68 Riders Garaj',
+        people: Number(data.people || 0),
+      }
+
+      if (realBackend && supabase) {
+        await supabase
+          .from('events')
+          .update({
+            title: patch.title,
+            event_date: patch.date,
+            event_time: patch.time,
+            location: patch.place,
+            distance: patch.distance,
+            details: patch.details,
+            status_text: patch.status,
+            image_type: patch.image,
+            pace: patch.pace,
+            meeting_point: patch.meetingPoint,
+            attendees_count: patch.people,
+          })
+          .eq('id', eventId)
+      }
+
+      setEvents((current) => current.map((event) => (event.id === eventId ? { ...event, ...patch } : event)))
+      notify('Etkinlik güncellendi.')
+      addActivity(`${patch.title} etkinliği güncellendi.`)
+    },
+    [addActivity, notify, realBackend],
+  )
+
+  const deleteEvent = useCallback(
+    async (eventId) => {
+      const event = events.find((item) => item.id === eventId)
+      if (realBackend && supabase) await supabase.from('events').delete().eq('id', eventId)
+      setEvents((current) => current.filter((item) => item.id !== eventId))
+      notify('Etkinlik silindi.')
+      if (event) addActivity(`${event.title} etkinliği silindi.`)
+    },
+    [addActivity, events, notify, realBackend],
+  )
+
+  const updateAnnouncement = useCallback(
+    async (announcementId, data) => {
+      const patch = {
+        title: data.title || 'Duyuru',
+        body: data.body || '',
+        type: data.type || 'event',
+      }
+      if (realBackend && supabase) {
+        await supabase.from('announcements').update(patch).eq('id', announcementId)
+      }
+      setAnnouncements((current) =>
+        current.map((announcement) => (announcement.id === announcementId ? { ...announcement, ...patch } : announcement)),
+      )
+      notify('Duyuru güncellendi.')
+      addActivity(`${patch.title} duyurusu güncellendi.`)
+    },
+    [addActivity, notify, realBackend],
+  )
+
+  const deleteAnnouncement = useCallback(
+    async (announcementId) => {
+      const announcement = announcements.find((item) => item.id === announcementId)
+      if (realBackend && supabase) await supabase.from('announcements').delete().eq('id', announcementId)
+      setAnnouncements((current) => current.filter((item) => item.id !== announcementId))
+      notify('Duyuru silindi.')
+      if (announcement) addActivity(`${announcement.title} duyurusu silindi.`)
+    },
+    [addActivity, announcements, notify, realBackend],
+  )
+
+  const updateGalleryItem = useCallback(
+    async (itemId, data) => {
+      const patch = {
+        title: data.title || 'Medya',
+        type: data.type || 'photo',
+        image: data.image || 'ride',
+      }
+      if (realBackend && supabase) {
+        await supabase
+          .from('gallery_items')
+          .update({ title: patch.title, media_type: patch.type, image_type: patch.image })
+          .eq('id', itemId)
+      }
+      setGallery((current) => current.map((item) => (item.id === itemId ? { ...item, ...patch } : item)))
+      notify('Galeri medyası güncellendi.')
+      addActivity(`${patch.title} galeri medyası güncellendi.`)
+    },
+    [addActivity, notify, realBackend],
+  )
+
+  const deleteGalleryItem = useCallback(
+    async (itemId) => {
+      const item = gallery.find((entry) => entry.id === itemId)
+      if (realBackend && supabase) await supabase.from('gallery_items').update({ status: 'rejected' }).eq('id', itemId)
+      setGallery((current) => current.filter((entry) => entry.id !== itemId))
+      notify('Galeri medyası arşivden kaldırıldı.')
+      if (item) addActivity(`${item.title} galeri medyası kaldırıldı.`)
+    },
+    [addActivity, gallery, notify, realBackend],
   )
 
   const sendMessage = useCallback((text) => {
@@ -930,8 +1046,14 @@ export function AppProvider({ children }) {
       isJoined,
       toggleJoin,
       addEvent,
+      updateEvent,
+      deleteEvent,
       addAnnouncement,
+      updateAnnouncement,
+      deleteAnnouncement,
       addGalleryItem,
+      updateGalleryItem,
+      deleteGalleryItem,
       sendMessage,
       submitFeedbackReport,
       resolveFeedbackReport,
@@ -967,8 +1089,14 @@ export function AppProvider({ children }) {
       isJoined,
       toggleJoin,
       addEvent,
+      updateEvent,
+      deleteEvent,
       addAnnouncement,
+      updateAnnouncement,
+      deleteAnnouncement,
       addGalleryItem,
+      updateGalleryItem,
+      deleteGalleryItem,
       sendMessage,
       submitFeedbackReport,
       resolveFeedbackReport,

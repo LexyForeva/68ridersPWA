@@ -129,6 +129,14 @@ button:disabled {
   padding: 13px 16px;
 }
 
+.outline-btn.compact {
+  width: 100%;
+  min-height: 40px;
+  margin: -2px 0 12px;
+  padding: 9px 12px;
+  font-size: 12px;
+}
+
 .icon-btn {
   width: 40px;
   height: 40px;
