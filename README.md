@@ -74,6 +74,7 @@ Yayina/staging teste acma adimlari:
 
 ```txt
 docs/TEAM_TESTING.md
+docs/DEPLOYMENT.md
 ```
 
 ## PWA
